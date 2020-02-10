@@ -30,6 +30,8 @@ probxi=[]
 proAcumxi=[]
 contxi=[]
 mejorxi=[]
+mejoreva=0
+
 
 
 #----------FUNCIONES AUXILIARES--------------
@@ -102,6 +104,16 @@ def remplazarfuente(cand,evacad,fselect):
         contxi[fselect]=0
     else:
         contxi[fselect]=contxi[fselect]+1
+def buscarmenor():
+    menor=evaxi[0]
+    pos=0
+    for i in range(np):
+        val=evaxi[i]
+        if(val<menor):
+            menor=val
+            pos=i
+    return pos
+
 def imprimir():
     print("Solucion: ",sol)
     print("Evaluacion: ",evaxi)
@@ -117,6 +129,7 @@ def iniciarPoblacion():
 for i in range(np):
         evaxi=[0] * np
         probxi=[0]* np
+        mejorxi=[0]* d
         proAcumxi=[0]* np
         contxi=[0]* np
         sol.append([0] * d)
@@ -180,10 +193,28 @@ def solCandidatasObs():
         remplazarfuente(cand,evaxit,fselect)
 
 def reemplazaragotados():
+    temp=[0]*d
+    for a in range(np): 
+        if (contxi[a]==l):
+            for p in range(d):
+              k=li+uniform(0,1)*(ls-li)
+              temp[p]=k
+            lisOrdenada = ordenamientoBurbuja(temp, len(temp))
+            print("Ordenada:",lisOrdenada)
+            lisBinaria=conversionBinaria(lisOrdenada,temp)
+            print("binaria:",lisBinaria)
+            evaxit=evaluacionSolucion(lisBinaria)
+            remplazarfuente(temp,evaxit,a)
+            
+
 
 def mejorglobal():
-    print("mejorglobal")
-
+    pos = buscarmenor()
+    for z in range(d):
+        mejorxi[z]=sol[pos][z]
+    mejoreva=evaxi[pos]
+    print("mejor global",mejorxi,"->",mejoreva) 
+    
 def busquedalocal():
     print("busqueda local")        
 
@@ -201,4 +232,5 @@ print("----------------------------------------------------------")
 solCandidatasObs()
 imprimir()
 calculoProbabilidad()
+mejorglobal()
 
