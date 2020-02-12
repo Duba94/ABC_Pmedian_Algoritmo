@@ -13,7 +13,7 @@ M=[[0,8,8,6,2,5],
    [5,6,9,7,3,0]]
 
 #Parametros iniciales 
-l=6
+lim=6
 cs=6
 np=3
 d=6
@@ -25,11 +25,11 @@ p=2
 
 #almacenadores
 sol=[]
-evaxi=[]
-probxi=[]
-proAcumxi=[]
-contxi=[]
-mejorxi=[]
+evaxi=[0]*np
+probxi=[0]*np
+proAcumxi=[0]*np
+contxi=[0]*np
+mejorxiBin=[0]*d
 mejoreva=0
 
 
@@ -46,6 +46,7 @@ def ordenamientoBurbuja(listaTem,tam):
                 ord[j+1] = ord[j]
                 ord[j] = k
     return ord
+
 #funcion para convertir menores p en 1 y otros en 0
 def conversionBinaria(listaOrd,listaSol):
     bin=[0]*d
@@ -54,6 +55,17 @@ def conversionBinaria(listaOrd,listaSol):
             if (listaOrd[b]==listaSol[z]):
                 bin[z]=1
     return  bin
+
+#funcion que busca las medianas en una solucion
+def buscarmedianas(lista):
+    pmed=[0]*p
+    cont=0
+    for z in range(d):
+        if(lista[z]==1):
+            pmed[cont]=z
+            cont=cont+1
+    return pmed
+
 
 #funcion para evaluar una solucion
 def evaluacionSolucion(listaBin):
@@ -96,14 +108,18 @@ def selectFuente():
         if(proAcumxi[i] > rulect):
             return i
 
-def remplazarfuente(cand,evacad,fselect):
+def mejorarfuente(cand,evacad,fselect):
     if(evacad<evaxi[fselect]):
-        for n in range(d):
-            sol[fselect][n]=cand[n]
-        evaxi[fselect]=evacad
-        contxi[fselect]=0
+        remplazarfuente(cand,evacad,fselect)
     else:
         contxi[fselect]=contxi[fselect]+1
+
+def remplazarfuente(nuevafuente,evafuente,fselect):
+    for i in range(d):
+        sol[fselect][i]=nuevafuente[i]
+    evaxi[fselect]=evafuente
+    contxi[fselect]=0
+
 def buscarmenor():
     menor=evaxi[0]
     pos=0
@@ -127,11 +143,6 @@ def imprimir():
 def iniciarPoblacion():
     print("iniciando Poblacion....")    
 for i in range(np):
-        evaxi=[0] * np
-        probxi=[0]* np
-        mejorxi=[0]* d
-        proAcumxi=[0]* np
-        contxi=[0]* np
         sol.append([0] * d)
 for i in range(np):
     for a in range(d):
@@ -141,10 +152,8 @@ for i in range(np):
 #funcion para representar en medianas
 def solPoblacionInicial():
     temp=[0]*d
-
     for i in range(np):
-        for a in range(d):
-            temp[a]=sol[i][a]
+        temp=sol[i]
         print("temp:",temp)
         lisOrdenada=ordenamientoBurbuja(temp,len(temp))
         print("ordeMin:",lisOrdenada)
@@ -163,7 +172,7 @@ def solCandidatasEmp():
         lisBinaria=conversionBinaria(lisOrdenada,cand)
         print("binaria:",lisBinaria)
         evaxit=evaluacionSolucion(lisBinaria)
-        remplazarfuente(cand,evaxit,i)
+        mejorarfuente(cand,evaxit,i)
         print("f(xi): ",evaxit)
 
 #funcion para calcular las probabilidades
@@ -190,47 +199,79 @@ def solCandidatasObs():
         lisBinaria=conversionBinaria(lisOrdenada,cand)
         print("binaria:",lisBinaria)
         evaxit=evaluacionSolucion(lisBinaria)
-        remplazarfuente(cand,evaxit,fselect)
+        print(evaxit)
+        mejorarfuente(cand,evaxit,fselect)
 
 def reemplazaragotados():
     temp=[0]*d
     for a in range(np): 
-        if (contxi[a]==l):
+        if (contxi[a]==lim):
             for p in range(d):
               k=li+uniform(0,1)*(ls-li)
               temp[p]=k
+            print("temporal:",temp)
             lisOrdenada = ordenamientoBurbuja(temp, len(temp))
             print("Ordenada:",lisOrdenada)
             lisBinaria=conversionBinaria(lisOrdenada,temp)
             print("binaria:",lisBinaria)
             evaxit=evaluacionSolucion(lisBinaria)
+            print(evaxi)
             remplazarfuente(temp,evaxit,a)
             
-
-
 def mejorglobal():
+    global evaxi
+    global mejorxiBin
+    global mejoreva
+    mejorsol=[0]*d
     pos = buscarmenor()
-    for z in range(d):
-        mejorxi[z]=sol[pos][z]
+    mejorsol=sol[pos]
+    lisOrdenada = ordenamientoBurbuja(mejorsol, len(mejorsol))
+    mejorxiBin=conversionBinaria(lisOrdenada, mejorsol)
     mejoreva=evaxi[pos]
-    print("mejor global",mejorxi,"->",mejoreva) 
     
 def busquedalocal():
-    print("busqueda local")        
-
-
+    global mejorxiBin
+    global mejoreva
+    tempBin=[0]*d 
+    tempBin=mejorxiBin[:]  
+    pmed=buscarmedianas(tempBin)
+    for a in range(p):
+        pos=pmed[a]
+        tempBin[pos]=0
+        for n in range(d):
+            if(mejorxiBin[n]==0):
+                tempBin[n]=1
+                evaxit=evaluacionSolucion(tempBin)
+                if(evaxit < mejoreva):
+                    mejorxiBin=tempBin[:]
+                    mejoreva=evaxit
+                tempBin[n]=0
+    
+                
 #codigo principal    
 iniciarPoblacion()
 solPoblacionInicial()
 imprimir()
-k=k+1
 print("---------------------------------------------------------")
-solCandidatasEmp()
-imprimir()
-calculoProbabilidad()
-print("----------------------------------------------------------")
-solCandidatasObs()
-imprimir()
-calculoProbabilidad()
-mejorglobal()
+while k< mcn:
+    k=k+1
+    solCandidatasEmp()
+    calculoProbabilidad()
+    imprimir()
+    print("----------------------------------------------------------")
+    solCandidatasObs()
+    calculoProbabilidad()
+    imprimir()
+    print("----------------------------------------------------------")
+    reemplazaragotados()
+    calculoProbabilidad()
+    imprimir()
+    print("----------------------------------------------------------")
+    mejorglobal()
+    print("mejor global: ","medianas->",mejorxiBin,"evaluacion->",mejoreva)
+    busquedalocal()
+    print("mejor globalBuevo: ","medianas->",mejorxiBin,"evaluacion->",mejoreva)
+    print("----------------------------------------------------------")
+print("mejor final: ","medianas->",mejorxiBin,"evaluacion->",mejoreva)
+
 
