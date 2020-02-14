@@ -3,27 +3,26 @@ import sys
 import os
 from random import uniform,randint
 import array
-
-#matriz de menores distancias entre los nodos del grafo
-M=[[0,8,8,6,2,5],
-   [8,0,5,8,9,6],
-   [8,5,0,3,6,9],
-   [6,8,3,0,4,7],
-   [2,9,6,4,0,3],
-   [5,6,9,7,3,0]]
+from io import open
+from math import inf
+from itertools import product
 
 #Parametros iniciales 
-lim=6
-cs=6
-np=3
-d=6
-ls=5.0
-li=-5.0
-mcn=5
+lim=50
+np=25
+d=100
+ls=100.0
+li=-100.0
+mcn=50
 k=0
-p=2
+p=5
+path="problema.txt"
+numaris=200
+nodos=100
 
 #almacenadores
+M=[[0]]*nodos
+aristas=[]
 sol=[]
 evaxi=[0]*np
 probxi=[0]*np
@@ -40,6 +39,36 @@ mejorxiglobal=[0]*d
 
 #----------FUNCIONES AUXILIARES--------------
 
+#funcion para leer los datos del archivo y formar las aristas
+def leerArchivo(path):
+    cont=0
+    file = open(path,"r")
+    for linea in file.readlines():
+        x = linea[:-1].split(";")
+        aristas.append([0] * len(x))
+        for i in range(len(x)):
+            aristas[cont][i]=int(x[i])
+        cont=cont+1
+    file.close
+
+#algoritmo de floy para clacular la matrix de distancias 
+def floyd_warshall(n, edge):
+    global M
+    rn = range(n)
+    dist = [[inf] * n for i in rn]
+    for i in rn:
+        dist[i][i] = 0
+    for u, v, w in edge:
+        dist[u-1][v-1] = w
+        #dist[v-1][u-1]=w
+    for k, i, j in product(rn, repeat=3):
+        sum_ik_kj = dist[i][k] + dist[k][j]
+        if dist[i][j] > sum_ik_kj:
+            dist[i][j] = sum_ik_kj
+            #dist[j][i] = sum_ik_kj
+
+    M=dist
+
 #Funcion para ordenar la solucion de menor a mayor
 def ordenamientoBurbuja(listaTem,tam):
     listaord=listaTem[:]
@@ -53,11 +82,14 @@ def ordenamientoBurbuja(listaTem,tam):
 
 #funcion para convertir menores p en 1 y otros en 0
 def conversionBinaria(listaOrd,listaSol):
+    cont=0
     listaxi=[0]*d
     for m in range(p):
-        for j in range(d):   
-            if (listaOrd[m]==listaSol[j]):
-                listaxi[j]=1
+        for j in range(d):
+            if(cont<p):   
+                if (listaOrd[m]==listaSol[j]):
+                    listaxi[j]=1
+                    cont=cont+1
     return  listaxi
 
 #funcion que busca las medianas en una solucion
@@ -107,7 +139,7 @@ def sumarevasol():
 #funcion que selecciona una fuente por el metodo de la ruleta
 def selectFuente():
     rulect=uniform(0,1)
-    print("valor ruleta: ",rulect)
+    #print("valor ruleta: ",rulect)
     for i in range(np):
         if(proAcumxi[i] > rulect):
             return i
@@ -140,49 +172,50 @@ def buscarmenor():
 
 #funcion que imprime la solucion, la evaluacion de las soluciones y sus contadores de fallo
 def imprimir():
-    print("Solucion: ",sol)
-    print("Evaluacion: ",evaxi)
-    print("Contadores: ",contxi)
+    print("\nEvaluacion: ",evaxi)
+    print("\nprobabilidas",probxi)
+    print("\nprobabiidadAcum",proAcumxi)
+    print("\nContadores: ",contxi)
+    print("")
 
 
 
 #---------------FUNCIONES PRINCIPALES--------------------
 
 #funcion para inicializar la poblacion inicial
-def iniciarPoblacion():
-    print("iniciando Poblacion....")    
-for i in range(np):
+def iniciarPoblacion():  
+    for i in range(np):
         sol.append([0] * d)
-for i in range(np):
-    for j in range(d):
-        sol[i][j]=li+uniform(0,1)*(ls-li)
+    for i in range(np):
+        for j in range(d):
+            sol[i][j]=li+uniform(0,1)*(ls-li)
 
 #funcion para representar en medianas
 def solPoblacionInicial():
     temp=[0]*d
     for i in range(np):
         temp=sol[i]
-        print("temp:",temp)
+        #print("temp:",temp)
         lisOrdenada=ordenamientoBurbuja(temp,len(temp))
-        print("ordeMin:",lisOrdenada)
+        #print("ordeMin:",lisOrdenada)
         lisBinaria=conversionBinaria(lisOrdenada,temp)
-        print("binario:",lisBinaria)
+        #print("binario:",lisBinaria)
         evaxi[i]=evaluacionSolucion(lisBinaria)
-        print("f(xi): ",evaxi[i])
+        print("f(xi):",i," = ",evaxi[i])
 
 #funcion para buscar soluciones candicatas para las empleadas 
 def solCandidatasEmp():
     evaxit=[0]*np
     for i in range(np):
         cand=CrearSolucionCandidata(i)
-        print("cand:",cand)
+        #print("cand:",cand)
         lisOrdenada = ordenamientoBurbuja(cand, len(cand))
-        print("Ordenada:",lisOrdenada)
+        #print("Ordenada:",lisOrdenada)
         lisBinaria=conversionBinaria(lisOrdenada,cand)
-        print("binaria:",lisBinaria)
+        #print("binaria:",lisBinaria)
         evaxit=evaluacionSolucion(lisBinaria)
         mejorarfuente(cand,evaxit,i)
-        print("f(xi): ",evaxit)
+        print("f(xi):",i," = ",evaxit)
 
 #funcion para calcular las probabilidades
 def calculoProbabilidad():
@@ -193,39 +226,40 @@ def calculoProbabilidad():
         probxi[i]=prob
         proAcumxi[i]=aux+prob
         aux=proAcumxi[i]
-    print("prob:",probxi)
-    print("probAcum:",proAcumxi)
 
 #funcion para selecionar una fuente a mejorar
 def solCandidatasObs():
     for i in range(np):
         xiselect=selectFuente()
-        print("fuente selecionada:",xiselect)
+        #print("fuente selecionada:",xiselect)
         cand=CrearSolucionCandidata(xiselect)
-        print("cand:",cand)
+        #print("cand:",cand)
         lisOrdenada = ordenamientoBurbuja(cand, len(cand))
-        print("Ordenada:",lisOrdenada)
+        #print("Ordenada:",lisOrdenada)
         lisBinaria=conversionBinaria(lisOrdenada,cand)
-        print("binaria:",lisBinaria)
+        #print("binaria:",lisBinaria)
         evaxit=evaluacionSolucion(lisBinaria)
-        print(evaxit)
+        print("f(xi):",i," = ",evaxit)
         mejorarfuente(cand,evaxit,xiselect)
 #funcion que busca los agotados y los remplaza con una nueva solucion
 def reemplazaragotados():
     temp=[0]*d
+    bandera=0
     for i in range(np): 
         if (contxi[i]>=lim):
+            bandera=1
             for j in range(d):
                 temp[j]=li+uniform(0,1)*(ls-li)
-            print("temporal:",temp)
+            #print("temporal:",temp)
             lisOrdenada = ordenamientoBurbuja(temp, len(temp))
-            print("Ordenada:",lisOrdenada)
+            #print("Ordenada:",lisOrdenada)
             lisBinaria=conversionBinaria(lisOrdenada,temp)
-            print("binaria:",lisBinaria)
+            #print("binaria:",lisBinaria)
             evaxit=evaluacionSolucion(lisBinaria)
-            print(evaxi)
+            print("f(xi):",i,"=",evaxi)
             remplazarfuente(temp,evaxit,i)
             contxi[i]=0
+    return bandera
 
 #funcion que busca la mejor solucion basica             
 def mejorSolucion():
@@ -261,6 +295,7 @@ def busquedalocal():
                     mejorxiLocal=tempxi[:]
                     mejorEvaLocal=evaxit
                 tempxi[j]=0
+        tempxi[pos]=1
 
 #funcion donde se determina el mejor global entre el el actual mejor global y el mejor local
 def mejorglobal():
@@ -272,7 +307,10 @@ def mejorglobal():
                 
 #   CODIGO PRINCIPAL 
 print("")  
-print("*************************** ABC-PMEDIAN ALGORITMO ************************")
+print("\n*************************** ABC-PMEDIAN ALGORITMO ************************")
+leerArchivo(path)
+floyd_warshall(nodos,aristas)
+print("\n------INICIALIZACION DE LA POBLACION------")  
 iniciarPoblacion()
 solPoblacionInicial()
 mejorSolucion()
@@ -281,27 +319,30 @@ mejorxiglobal=mejorxi
 imprimir()
 while k < mcn:  
     k=k+1
-    print(">>>>>>>>>>>>>>>> CICLO:",k," <<<<<<<<<<<<<<<<<")
+    print("\n>>>>>>>>>>>>>>>> CICLO:",k," <<<<<<<<<<<<<<<<<")
     print("")
-    print("------SOLUCIONES CANDIDATAS EMP------")
+    print("\n------SOLUCIONES CANDIDATAS EMP------")
     solCandidatasEmp()
     calculoProbabilidad()
     imprimir()
-    print("------SOLUCIONES CANDIDATAS OBS-------")
+    print("\n------SOLUCIONES CANDIDATAS OBS-------")
     solCandidatasObs()
     calculoProbabilidad()
     imprimir()
-    print("------REMPLAZO FUENTES AGOTADAS-------")
-    reemplazaragotados()
-    calculoProbabilidad()
-    imprimir()
-    print("------MEMORIZA MEJOR SOLUCION----------")
+    print("\n------REMPLAZO FUENTES AGOTADAS-------")
+    band=reemplazaragotados()
+    if(band==1):
+        calculoProbabilidad()
+        imprimir()
+    else:
+        print("\n¡No se han encontrado soluciones agotadas!")
+
+    print("\n------MEMORIZA MEJOR SOLUCION----------")
     mejorSolucion()
-    print("mejor Basico: ","medianas->",mejorxi,"evaluacion->",mejoreva)
+    print("\nMejor Basico: ","medianas->",mejorxi,"evaluacion->",mejoreva)
     busquedalocal()
-    print("mejor Local: ","medianas->",mejorxiLocal,"evaluacion->",mejorEvaLocal)
+    print("\nMejor Local: ","medianas->",mejorxiLocal,"evaluacion->",mejorEvaLocal)
     mejorglobal()
-    print("mejor Global: ","medianas->",mejorxiglobal,"evaluacion->",mejorevaglobal)
-    print("")
+    print("\nMejor Global: ","medianas->",mejorxiglobal,"evaluacion->",mejorevaglobal)
 
 
